@@ -1,12 +1,31 @@
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
+import requests
+import random
 from datetime import datetime
 
-def process_data(data):
-    # Criar DataFrame e salvar como Parquet
+def fetch_random_fire_pokemon():
+    response = requests.get("https://pokeapi.co/api/v2/type/fire")
+    if response.status_code != 200:
+        raise Exception("Failed to fetch data from PokeAPI")
+    
+    pokemon_list = response.json()['pokemon']
+    random_pokemon = random.choice(pokemon_list)['pokemon']
+    
+    pokemon_data = requests.get(random_pokemon['url']).json()
+    return {
+        'number': pokemon_data['id'],
+        'name': pokemon_data['name'],
+        'type': 'fire',
+        'weight': pokemon_data['weight']
+    }
+
+def process_data():
+    data = fetch_random_fire_pokemon()
+    pokemon_name = data.get('name', 'unknown_pokemon')
     df = pd.DataFrame([data])
-    filename = f"raw_data_{datetime.now().strftime('%Y%m%d%H%M%S')}.parquet"
+    filename = f"{pokemon_name}_{datetime.now().strftime('%Y%m%d%H%M%S')}.parquet"
     table = pa.Table.from_pandas(df)
     pq.write_table(table, filename)
     return filename
